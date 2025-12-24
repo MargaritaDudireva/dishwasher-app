@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Мойка посуды 🍽️</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            text-decoration: none;
+        }
+        
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .button-primary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .participant {
+            display: inline-block;
+            padding: 8px 15px;
+            margin: 5px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+        
+        .number-btn {
+            width: 60px;
+            height: 60px;
+            margin: 5px;
+            font-size: 24px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍽️ Мойка посуды</h1>
+        
+        <div id="main-menu">
+            <button class="button button-primary" onclick="showDraw()">🎲 Начать розыгрыш</button>
+            <button class="button" onclick="showStats()">📊 Статистика</button>
+            <button class="button" onclick="showMyStats()">📈 Моя статистика</button>
+            <button class="button" onclick="showRules()">📋 Правила</button>
+        </div>
+        
+        <div id="draw-screen" style="display:none;">
+            <h2>🎯 Розыгрыш</h2>
+            <div id="participants-list"></div>
+            <button class="button button-primary" onclick="startDraw()">РАСПРЕДЕЛИТЬ ЧИСЛА</button>
+            <div id="numbers-result" style="margin-top:20px;"></div>
+            <div id="dice-section" style="display:none; margin-top:20px;">
+                <h3>🎲 Выпавшее число:</h3>
+                <div>
+                    <button class="number-btn" onclick="selectNumber(1)">1</button>
+                    <button class="number-btn" onclick="selectNumber(2)">2</button>
+                    <button class="number-btn" onclick="selectNumber(3)">3</button>
+                    <button class="number-btn" onclick="selectNumber(4)">4</button>
+                    <button class="number-btn" onclick="selectNumber(5)">5</button>
+                    <button class="number-btn" onclick="selectNumber(6)">6</button>
+                </div>
+            </div>
+            <button class="button" onclick="showMainMenu()">← Назад</button>
+        </div>
+        
+        <div id="stats-screen" style="display:none;">
+            <h2>📊 Статистика</h2>
+            <div id="stats-content"></div>
+            <button class="button" onclick="showMainMenu()">← Назад</button>
+        </div>
+    </div>
+
+    <script>
+        // Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Данные (в реальном приложении - с сервера)
+        let participants = [
+            {name: "Иван", immunities: 3, excluded: false},
+            {name: "Мария", immunities: 2, excluded: false},
+            {name: "Петр", immunities: 1, excluded: true},
+            {name: "Анна", immunities: 0, excluded: false},
+            {name: "Сергей", immunities: 0, excluded: false},
+            {name: "Ольга", immunities: 0, excluded: false},
+            {name: "Дмитрий", immunities: 0, excluded: false}
+        ];
+        
+        let history = [
+            {week: "01.01.2024", winner: "Петр", number: 3},
+            {week: "08.01.2024", winner: "Иван", number: 6}
+        ];
+        
+        function showMainMenu() {
+            document.getElementById('main-menu').style.display = 'block';
+            document.getElementById('draw-screen').style.display = 'none';
+            document.getElementById('stats-screen').style.display = 'none';
+        }
+        
+        function showDraw() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('draw-screen').style.display = 'block';
+            
+            // Показываем участников
+            let list = document.getElementById('participants-list');
+            list.innerHTML = '<h3>👥 Участники:</h3>';
+            
+            participants.forEach(p => {
+                let status = p.excluded ? '⏸️' : '✅';
+                let immunity = p.immunities > 0 ? ` 🛡️${p.immunities}` : '';
+                list.innerHTML += `<div class="participant">${status} ${p.name}${immunity}</div>`;
+            });
+        }
+        
+        function startDraw() {
+            // Выбираем 6 доступных участников
+            let available = participants.filter(p => !p.excluded);
+            
+            if (available.length < 6) {
+                alert(`❌ Нужно 6 участников, доступно: ${available.length}`);
+                return;
+            }
+            
+            // Выбираем случайных 6
+            let selected = [];
+            let indices = [];
+            while (selected.length < 6) {
+                let randomIndex = Math.floor(Math.random() * available.length);
+                if (!indices.includes(randomIndex)) {
+                    indices.push(randomIndex);
+                    selected.push(available[randomIndex]);
+                }
+            }
+            
+            // Генерируем числа 1-6
+            let numbers = [1,2,3,4,5,6];
+            numbers = numbers.sort(() => Math.random() - 0.5);
+            
+            // Показываем результат
+            let result = document.getElementById('numbers-result');
+            result.innerHTML = '<h3>🎯 Распределение чисел:</h3>';
+            
+            selected.forEach((p, i) => {
+                let immunity = p.immunities > 0 ? ` 🛡️${p.immunities}` : '';
+                result.innerHTML += `<div style="margin:5px 0;">👤 ${p.name}${immunity} → <b>${numbers[i]}</b></div>`;
+            });
+            
+            // Показываем кнопки для выбора числа
+            document.getElementById('dice-section').style.display = 'block';
+            
+            // Отправляем уведомление в Telegram (в реальном приложении)
+            // tg.sendData(JSON.stringify({type: 'draw_started', participants: selected, numbers: numbers}));
+        }
+        
+        function selectNumber(number) {
+            if (confirm(`🎲 Выпало число: ${number}\n\nПодтвердить?`)) {
+                alert(`✅ Число ${number} зафиксировано!\nПобедитель будет определен.`);
+                
+                // В реальном приложении отправляем на сервер
+                // tg.sendData(JSON.stringify({type: 'number_selected', number: number}));
+                
+                // Возвращаем в меню
+                showMainMenu();
+            }
+        }
+        
+        function showStats() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('stats-screen').style.display = 'block';
+            
+            let content = document.getElementById('stats-content');
+            content.innerHTML = '<div class="stats">';
+            
+            // Считаем статистику
+            let washCounts = {};
+            history.forEach(h => {
+                washCounts[h.winner] = (washCounts[h.winner] || 0) + 1;
+            });
+            
+            // Сортируем по количеству
+            let sorted = Object.entries(washCounts).sort((a,b) => b[1] - a[1]);
+            
+            if (sorted.length === 0) {
+                content.innerHTML += '<p>Статистики еще нет</p>';
+            } else {
+                sorted.forEach(([name, count]) => {
+                    content.innerHTML += `<p>👤 ${name}: ${count} раз мыл(а) посуду</p>`;
+                });
+            }
+            
+            content.innerHTML += '</div>';
+        }
+        
+        function showMyStats() {
+            // В реальном приложении - получаем данные пользователя
+            alert("📈 В реальном приложении здесь будет ваша статистика!\n\n👤 Имя: ...\n🍽️ Мыл посуду: X раз\n🛡️ Иммунитеты: ...");
+        }
+        
+        function showRules() {
+            let rules = `🎲 ПРАВИЛА:\n\n` +
+                       `1. Каждую неделю - новый розыгрыш\n` +
+                       `2. 6 участников получают числа 1-6\n` +
+                       `3. Кидается реальный кубик\n` +
+                       `4. У кого выпало число - моет посуду\n` +
+                       `5. Победитель отдыхает неделю\n` +
+                       `6. Иммунитеты: 🥇=3, 🥈=2, 🥉=1\n\n` +
+                       `🍽️ Удачи!`;
+            
+            alert(rules);
+        }
+        
+        // Инициализация
+        tg.ready();
+        showMainMenu();
+    </script>
+</body>
+</html>
